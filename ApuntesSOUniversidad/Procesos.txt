@@ -1,0 +1,109 @@
+pid_t fork(void); // Crea un nuevo proceso clonando el que lo ejecuta
+El padre retorna el PID del hijo y el hijo retorna 0
+
+int exec*(const char *path, ...); // Familia de llamadas al sistema que permite cambiar el mapa de memoria del proces por el de un nuevo programa con argumentos de llamada
+
+// Señales
+int kill(pid_t pid, int sig); // Manda una señal a un proceso, devuelve 0 en éxito y -1 en error
+pid > 0 // La señal se envia al proceso con el PID especificado
+pid == 0 // La señal se envia a todos los procesos en el mismo grupo de proceos que el proceso llamador
+pid == -1 // La señal se envía a todos los procesos a los que el proceso llamador tiene permiso para enviar señales, excepto el proceso 1 (init)
+pid < -1 // La señal se envia a todos los procesos en el grupo de procesos -pid
+sig // Especifica la señal quese enviará SIGKILL (señal de terminación) y SIGTERM (señal de terminación suave)
+
+int raise(int sig); // Se envia una señal a si mismo
+
+int killpg(pid_t pgrp, int sig); // Equivalente a kill(-pgrp, sig), envia la señal sig a todos los procesos pertenecientes al grupo de procesos pgrp
+
+int pause(void); // Bloquea un proceso a la espera de la recepción de una señal
+
+int sigaction(int sig, const struct sigaction *restruct act, struct sigaction *restrict oact);
+// Registra un manejador para tratar la señal
+
+// Al ejecutar un exec, el proceso mantiene la TFa, por lo que el nuevo programa tiene acceso a los ficheros abiertos por el anterior, a menos que se hubiesen abierto con la opción close on exec(flag O_CLOEXEC activa)
+// Las señales que tengan registrado un manejador pasaran a tener la acción por defecto
+
+Variantes de exec:
+Formato largo (l): un puntero por argumento
+Formato vector (v): un array con los parámetros
+Con entorno (e)
+Buscando en la variable PATH (p)
+
+int execl(const char *path, const char *arg0, ..., NULL);
+int execle(const char *path, const char *arg0, ..., NULL, char *const envp[]);
+int execlp(const char *file, const char *arg0, ..., NULL);
+int execv(const char *path, char *const argv[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
+
+Esperar la terminación de hijos:
+pid_t wait(int *status); // Espera la finalización de cualquiera de sus procesos hijos
+
+pid_t waitpid(pid_t pid, int *status, int options);
+pid < -1 // Espera a que termine cualquier proceso hijo que pertenezca la grupo de procesos indicado por el valor absoluto de pid
+pid == -1 // Espera a la finalización de cualquier proceso hijo
+pid == 0 // Espera a la finalización de cualquier proceso hijo que pertenezca al mismo grupo de procesos que el proceso padre
+pid > 0 // Espera por la terminación del proceso hijo con este valor de pid
+status es un parámetro de salida que codifica el motivo de la terminación del hijo
+	// WIFEXITED, WIFSIGNALED,...
+options es una máscara de bits que permite determinar las situaciones que terminan la espera:
+	WNOAHNG // No ha terminado ningún proceso hijo
+	WUNTRACED // UN hijo ha sido parado
+	WCONTINUED // Un hijo se ha reanudado
+
+// Si un proceso hijo termina, queda en un estado zombie hasta poder entregar el valor de retorno al proceso padre (a tráves de wait)
+
+
+int exit(int status); // Termina con la ejecución del proceso
+status debe ser 0 si no hay error y otro si lo hay
+
+
+Credenciales de un proceso:
+pid (Identificador de proceso)
+ppid (Identificador del proceso padre)
+pgid (Identificador del grupo de procesos)
+sid (Identificador de sesión)
+uid (Identificador de usuario)
+gid (Identificador de grupo)
+euid (Identificador de usuario efectivo)
+egid (Identificador de grupo efectivo)
+Identificadores set-user-id y set-group-id
+
+setpgid(pid_t pid, pid_t pgid); // Asigna un proceso a un grupo
+// Un proceso solo puede cambiar su id de grupo o de algún hijo
+// Un proceso lider no puede cambiar su id de grupo
+// Si se cambia el id de grupo de un proceso, el líder del nuevo grupo tiene que estar en la misma sesión que el proceso
+// Un prcoeso que se invoque con setpgid(0, 0); se convierte en lider de su propio grupo (con id el pid del proceso)
+
+Utilidades procesos y trabajos:
+ps: lista de los procesos activos del sistema
+pgrep: equivalente a ps | grep
+top: lista ordenada e interactiva de los procesos del sistema
+kill: envio de una señal a un proceso
+killall: envio de una señal a un proceso por nombre
+pidof: obtiene el pid de un proceso por nombre (filtra la salida ps)
+pkill: permite mandar una señal a un proceso por el nombre del comando ejecutado (usa grep y pidof)
+pstree: Muestra el árbol de procesos
+jobs: lista de trabajos activos en shell
+wait: permite esperar la finalización de un proceso o un trabajo
+nohup: permite lanzar un proceso que ignore la señal SIGHUP
+
+// Hilos 
+// Los hilos de un mismo proceso comparten
+	- Variables globales del proceso
+	- Heap del proceso
+	- Otras regiones del proceso
+
+Servicion POSIX
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*func)(void *), void *arg); // Creación de un hilo con función de entrada func
+// Atributos: tamaño de pila, prioridad, política de planificación
+// Existen llamadas para modificar los atributos
+
+int pthread_exit(void *value); // Terminación del hilo y retorno de valor de terminación
+
+itn pthread_join(pthread_t *thread, void **value); // Espera a la terminación de un hilo y obtener el valor de terminación
+
+pthread_t pthread_self(void); // Obtención del identificador del hilo
+
+

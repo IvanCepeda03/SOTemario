@@ -1,0 +1,199 @@
+************************************************
+Introducción a la programación de sistemas POSIX
+************************************************
+
+-----------------------
+Comprobación de errores
+-----------------------
+Las llamadas al sistema y muchas funciones de biblioteca devuelven un valor entero que indica si se ha producido un error
+
+Semántica llamadas al sistema:
+	-1 significa error
+		Se escribe un código de error en la variable errno
+	Un valor distinto no es error
+	Hay algunas excepciones (se debe consultar el manual)
+
+Semántica funciones de biblioteca:
+	Muchas usan la semántica de las llamadas al sistema
+	Otras codifican el valor de error en el valor de retorno como un valor de retorno
+		Se debe consultar el manual
+
+
+IDENTIFICACIÓN DE ERRORES
+El error se codifica numericamente en la variable errno
+El sistema proporciona una serie de funciones de biblioteca que nos permiten informar de un error conocido:
+	strerror // Devuelve una cadena de caracteres que describe el error
+	perror // Imprime por salida estándar una cadena seguida de la descripción del error que se ha producido
+
+Una alternativa es el uso de las funcioens
+	void err(int eval, const char *fmt, ...);
+	void warn(const char *fmt, ...);
+	Estas muestran por salida estándar un string de la forma:
+		nombre_programa: cadena_fmt: cadena_strerror
+O las funciones:
+	void errx(int eval, const char *fmt, ...);
+	void warnx(const char *fmt);
+	Muestran por salida estándar un string de la forma:
+		nombre_programa: cadena_fmt
+
+CODIGOS DE ERROR
+Dependen de la arquitectura
+errno -l // Muestra una lista de los errores junto a sus valores
+
+
+------------------
+MANEJO DE FICHEROS
+------------------
+
+Tipos de ficheros en POSIX:
+	Regular
+	Directorio
+	Enlace Simbólico
+	Tuberias con nombre (FIFO)
+	Fichero de dispositivo (carácteres o bloques)
+	Socket
+
+Atributos de un fichero POSIX:
+	Nombre (incluye su extensión)
+	Tipo
+	Tamaño
+	Fecha de creación
+	Fecha de última modificación
+	Propietario, grupo
+	Permiso de lectura, escritura, ejecucción
+		Distinto para propietariom grupo y otros
+
+El modelo de fichero que el SO presenta al programador es_
+	- Una secuencia ordenada de bytes
+		- byte n: saltar n bytes desde el comienzo
+	- Un marcador o un puntero de posición en dicha secuencia
+		- no confundir con una variable tipo puntero
+		- una lectura o escritura hacen avanzar este puntero
+	- Un descriptor de fichero (fd) para manejarlo
+		- Asociado a una apertura concreta del fichero (permisos y posicion)
+	- Unas operaciones básicas sobre el fichero
+
+API POSIX para ficheros:
+	int open(const char *pathname, int flags, mode_t mode);
+	int creat(const char *pathname, mode_t mode);
+	int close(int fd);
+	off_t lseek(int fd, off_t offset, int whence); // Desplazamiento del puntero de posicion
+	ssize_t read(int fd, coid *buf, size_t count);
+	ssize_t write(int fd, const void *buf, size_t count);
+	int unlink(const char *pathname); // Borrado del archivo (nombre)
+	int stat(const char *pathname, struct stat *statbuf); // Obtención atributos fichero
+	int fstat(int fd, struct stat *statbuf); // Obtención atributos fichero
+	int lstat(const char *pathname, struct stat *statbuf); // Obtención atributos fichero
+
+En POSIX un fichero se maneja con un descriptor de fichero obtenid al abrirlo con la siguiente llamada al sistema:
+int open(const char *pathname, int oflag, mode_t mode);
+
+El descriptor es un entero:
+	- Indica la posición correspondiente en la Tabla de Descriptores de Ficheros Abiertos (TFA) del proceso
+	- La TFA es una estrcutura gestionada por el SO para el proceso
+	- La apertura se realiza en un modo indicado por los flags
+		- Mascara de bits: O_RDONLY, O_WRONLY, O_RDWR, O_APPEND, ...
+		- Permisos de lectura o escritura
+		- Qué hacer si existe (colocarse al final, borrar, ...) o si no existe
+	- El parametro opcional mode indica los permisos de usuario, grupo y otros que hay que dar si el fichero se crea (flag O_CREAT)
+
+
+Manejo de ficheros con biblioteca estándar de C:
+
+API stdlib para ficheros:
+	FILE *fopen(const char *pathname, const char *mode);
+	int fclose(FILE *stream);
+	FILE *fdopen(int fd, const char *mode);
+	FILE *freopen(const char *pathname, const char *mode);
+	size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+	size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+	int fseek(FILE *stream, long offset, int whence);
+	long ftell(FILE *stream);
+	void rewind(FILE *stream);
+	int fgetpos(FILE *stream, fpos_t *pos);
+	int fsetpos(FILE* stream, const fpos_t *pos);
+	int fflush(FILE *stream);
+	void setbuf(FILE *stream, char *buf);
+	void setbuffer(FILE *stream, char *buf ,size_t size);
+	void setlinebuf(FILE *stream);
+	int setvbuf(FILE *stream, char *buf, int mode, size_t size);
+
+open vs. fopen:
+int open(const char *pathname, int flags);
+	- Se usa un entero como identificador de la apertura
+		- Es una entrada de una tabla de descripteros de ficheros abiertos del proceso
+	- Sólo válida en sistemas POSIX
+	- El argumento flags vinculado con las opciones de apertura de los ficheros POSIX
+
+FILE *fopen(const char *pathname, const char *mode);
+	- Se usa una estructura FILE como identificador de la apertura
+		- fopen devuelve la dirección (puntero) de la estructura usada
+	- Los modos de apertura se identifican con distintas cadenas de carácteres: 
+		"r", "r" + "w", "w" + "a", "a+"
+	- Independiente del sistema
+
+Buffer intermedio:
+Las llamadas al sistema son costosas:
+	- Cada llamada a open, close, read, write, etc supone una excepción software
+La biblioteca estándar de C usa buffers intermedios:
+	- Llamada consecutivas a fread o fwrite suponen lecturas o escrituras del buffer intermedio
+	- Cuando corresponda, según la política de buffer activa, se hace la llamada al sistema para leer o escribir del fichero real (escritura/lectura en bloque):
+		- Porque se llena o vacía el buffer
+		- Porque leamos/escribimos un final de línea
+	- La política se puede cambiar con
+		int setvbuf(FILE *stream, char *buf, int mode, size_t size);
+
+*********************
+Manejo de Directorios
+*********************
+Concepto de directorio:
+	- Fichero especial para agrupar ficheros y directorios relacionados
+	- Es una relación lógica
+		- El directorio contiene una lista/relación de nombres de ficheros, contiene los ficheros en si
+		- Los ficheros tampoco se almacenan físicamente juntos en el disco
+	- El conjunto de directorios del SF forma una estructura de árbol
+	- El nombre completo o ruta de un fichero se forma con la lista de directorios que hay que atravesar para llegar al fichero desde la raíz
+
+Modelo de directorio POSIX:
+	- El modelo de directorio que el SO presenta al programador es:
+		- Una tabla de entradas de directorio donde cada entrada contiene:
+			- Nombre de un fichero o directorio
+			- Un número de nodo-i
+		- Un descriptor de fichero
+		- Una serie de operaciones específicas para directorios:
+			- opendir, readdir, closedir
+
+Entradas especiales:
+En todos los sistemas los directorios suelen tener dos entradas especiales:
+	- . el propio directorio
+	- .. el directorio padre
+Estas entrradas permiten
+	- Nombrado de ficheros y directorios con rutas relativas:
+		- /tmp/datos.txt
+		- ./datos.txt
+		- ../tmp/datos.txt
+	- Recorrido del árbol de directorios
+
+API POSIX para directorios:
+En POSIX un directorio se maneja con el descriptor obtenido al abrirlo:
+	DIR* opendir(char *dirname);
+	struct dirent* readdir(DIR* dirp);
+	int closedir(DIR *dirp);
+
+	- El descriptor es una estructura DIR
+	- Su almacenamiento en memoria lo gestiona la biblioteca del sistema
+	- La función readdir devuelve la siguiente entrada de directorio como una estructura struct dirent
+		- Almacenamiento gestionado por la biblioteca del sistema
+		- Implementación dependiente del sistema
+		- POSIX fija que debe de tener al menos dos campos:
+			- d_name: nombre del fichero/directorio
+			- d_ino: número de nodo-i del fichero
+		- Definida en el fichero dirent.h
+
+LLamadas al sistema relacionadas:
+	- mkdir: crea un ficehro con un nombre y protección
+	- rmdir: borra el directorio vacío con un nombre
+	- rewinddir: Sitúa el puntero de posición en la primera entrada
+	- chdir (cd): Cambia el directorio actual
+	- getcwd (pwd): Obtener el directorio actual 
+	- rename: Cambiar el nombre de una entrada del directorio

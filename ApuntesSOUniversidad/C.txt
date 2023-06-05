@@ -1,0 +1,196 @@
+*********
+Resumen C
+*********
+
+Sintaxis básica: Control de flujo
+	if () {} else {}
+	while () {}
+	do {} while()
+	for (i = 0; i < N; i++);
+	switch () {case 1: ...}
+	continue; break;
+
+Sintaxis básica: Operadores
+	Aritméticos: + - / * % ++ --
+	Operadores de bits:& | ^ << >> ∼
+		i = i&0x0f; i |= 0x1; i ^= i; i = i<<2;
+	Operadores relacionales: < > <= >= == !=
+	Operadores lógicos: && || !
+		if ((i < 100) && (i != 4) || !finish) {...}
+
+Biblioteca Estándar de C (stdlib):
+	Operaciones básicas sobre ficheros:
+		fopen, fclose, fread, fwrite, fflush, ...
+	Operaciones de entrada/salida (E/S) estándar:
+		printf, sprintf, snprintf, fprintf, scanf, fscanf
+		getc, fgetc, fgets, getchar, ungetc, ...
+	Operaciones de procesado de cadenas de carácteres
+		strlen, strcat, strcmp, strcpy
+	Operaciones de gestión de memoria:
+		malloc, realloc, calloc, free, memcpy, memset, ...
+	Operaciones matemáticas:
+		sin, cos, tan, sqrt, rand, ...
+
+Salida estándar:
+	int printf(const char *format, ...);
+	format admite marcas para la inserción de valores de variables:
+		%d enteros con signo
+		%u enteros sin signo
+			modificadores %llu para long long int
+		%s cadena de carácteres
+		%p punteros
+
+Entrada estandar:
+	int scanf(const char *format, ...);
+	format admite las mismas marcas que printf para la entrada de valores de variables
+	por cada marcador hay que pasar una dirección de un buffer para almacenar el valor
+
+Arrays:
+	tipo nombre_array[TAM]; // Declaración
+	nombre_array[i] = valor_i;
+
+Arrays multidimensionales:
+	tipo nombre_matriz[TAM_I][TAM_J];
+	nombre_matriz[i][j] = valor_ij;
+
+Structs:
+	sizeof(tipo_dato/dato); // Devuelve el numero de bytes que ocupa una variable
+
+	struct nombre_struct {
+		tipo_dato1 dato1;
+		...
+		tipo_daton daton;
+	};
+	struct nombre_struct varname; // Declaración struct
+	Acceder a datos:
+	A partir de una variable struct: varname.dato;
+	A partir de un puntero a un struct: pointer->dato;
+
+Union:
+	Buffer que puede contener uno de los campos miembro de la unión
+	Tamaño de la unión igual al tamaño del mayor de sus campos
+	Ejemplo:
+		union address {
+			unsigned char ipv4[4];
+			unsigned char ipv6[16];
+		};
+		union address midir;
+		midir.ipv4[0] = 192;
+		midir.ipv4[1] = 168;
+		midir.ipv4[2] = 1;
+		midir.ipv4[3] = 2;
+
+Definición de tipos:
+	typedef tipo nombre;
+	// tipo un tipo de datos ya definido o una definición de tipo compuesto
+	Ejemplo:
+	typedef struct {
+		int id;
+		char nombre[100];
+	} alumno_t;
+	alumno_t mialumno;
+	mialumno.id = 100;
+
+Punteros:
+	Variable que almacena una dirección de memoria
+	Se le debe asignar una dir. válida antes de su uso:
+		Dir. de una variable: &a
+		Una dir. devuelta por el sistema. Ej. malloc
+	Operandos propios:
+		Desreferencia *: acceso a la dirección almacenada
+		Dirección de &: obtiene la dir. de variable, para ser asignada a un puntero
+	Ejemplo:
+		float *f; // Declaración var tipo float
+		float *f_ptr; // Declaración var tipo puntero
+		f_ptr = &f; // Asignamos la dir de f a f_ptr;
+		*f_ptr = 5.4; // Modificamos el valor de la var
+
+Cadenas de caractéres:
+	Se representan como una secuencia de enteros con signo de tamaño byte (char) finalizados en un byte a 0 (byte null o '\0'):
+	Pueden declararse como un array:
+		char str[6] = {'H', 'E', 'L', 'L', 'O', '\0'};
+		printf("%s", str);
+	Pueden declararse como un literal de cadena con ""
+		printf("%s", "hello");
+	Estas pueden usarse para inicializar un array:
+		char str[] = "hello";
+		printf("%s", str);
+	Asignar su dirección a un puntero:
+		char *str = "hello";
+		printf("%s", str)
+
+Operaciones sobre cadenas de carácteres:
+	Requiere la inclusión de strings.h
+	Copia: strcpy, strncpy
+	Concatenado: strcat, strncat
+	Comparación: strcmp, strncmp
+	Longitud: strlen
+	Duplicado: strdup
+	Creación con formato: sprintf, snprintf
+
+Versiones seguras (con n):
+	Ejemplo: strcat y strncat
+	#include <strings.h>
+	char *strcat(char *dest, const char *src);
+	char *strncat(char /dest, const char *src, size_t n);
+	strcat: copia los bytes hasta encontrar el final de línea de src
+	strncat: copia como máximo n bytes
+
+Asignación dinámica de memoria:
+	Funciones para la gestión del heap:
+		malloc: reserva memoria dinámica
+		calloc: reserva memoria dinámica e inicializa a 0
+		realloc: modificación del tamaño reservado
+		free: liberación de la memoria reservada
+
+Funciones:
+	C solo admite parámetros por valor
+	int sum(int a, int b);
+	El paso por referencia lo conseguimos pasando explicitamente la direcciñon de una variable a un argumento tipo puntero
+	void swap(int *, int *);
+	swap(&num1, &num2);
+	Los arrays se pasan siempre por referencia
+	Las estructuras se suelen pasar por referencia
+
+Punteros a función:
+	Almacenan la dirección de una función y pueden ser usados para invocarla con el operador ()
+		Permiten pasar una función como argumento
+		O almacenar la dir. de una función a la que invocar en el futuro
+
+	// Función que devuelve entero
+	int func(void);
+
+	// Función que devuelve puntero a entero
+	int *func(int a);
+
+	// Puntero a función devuelve entero
+	int (*func)(void);
+
+	// Puntero a función devolviendo ptr a int
+	int *(*func)(int);
+
+	Ejemplo:
+	#include <stdio.h>
+	void myproc (int d);
+	void mycaller(void (* f)(int), int param);
+
+	void main(void) {
+		myproc(10); /*call myproc with parameter 10*/
+		mycaller(myproc,10); /* and do the same again ! */
+	}
+
+	void mycaller(void (* f)(int), int param){
+		(*f)(param); /* call function *f with param */
+	}
+
+	void myproc (int d){
+		... /* do something with d */
+	}
+
+Parámetros de la linea de comandos:
+	La funcion main puede recibir un array de cadena de carácteres y su tamaño
+	int main(int arcg, char **argv) {}
+	argc: Numero de parámetros (El nombre del ejecutable es un parametro)
+	argv[]: Array de parámetros
+	argv[0]: nombre del programa
+
